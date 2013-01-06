@@ -3,7 +3,7 @@
 
 ## Documentation
  
-https://github.com/mlarocca/PyCrawler/tree/master/docs
+http://mlarocca.github.com/PyCrawler/
 
 ## Coverage Testing results
     
