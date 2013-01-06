@@ -1,9 +1,0 @@
-Crawler assumption:
-Only crawls static content
-	Anchors
-	Imgs
-	Scripts
-	Stylesheets
-	Forms
-Discards query parameters and #fragments
-links can't contain quotes or double quotes
