@@ -8,7 +8,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>Auto Generated Documentation &mdash; PyCrawler 1.1.0 documentation</title>
+    <title>Auto Generated Documentation &mdash; PyCrawler 1.2.1 documentation</title>
     
     <link rel="stylesheet" href="_static/default.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
@@ -16,7 +16,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '',
-        VERSION:     '1.1.0',
+        VERSION:     '1.2.1',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -25,7 +25,7 @@
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
-    <link rel="top" title="PyCrawler 1.1.0 documentation" href="index.html" />
+    <link rel="top" title="PyCrawler 1.2.1 documentation" href="index.html" />
     <link rel="prev" title="Project Summary" href="project.html" /> 
   </head>
   <body>
@@ -38,7 +38,7 @@
         <li class="right" >
           <a href="project.html" title="Project Summary"
              accesskey="P">previous</a> |</li>
-        <li><a href="index.html">PyCrawler 1.1.0 documentation</a> &raquo;</li> 
+        <li><a href="index.html">PyCrawler 1.2.1 documentation</a> &raquo;</li> 
       </ul>
     </div>  
 
@@ -96,7 +96,7 @@ to find the next pages to crawl and to enqueue the URLs of the next pages to be 
 <dd><p>The main crawler, the object handling all the high-level crawling process.</p>
 <dl class="method">
 <dt id="pycrawler.CrawlerHandler.format_and_enqueue_url">
-<tt class="descname">format_and_enqueue_url</tt><big>(</big><em>page_url</em>, <em>current_path</em><big>)</big><a class="headerlink" href="#pycrawler.CrawlerHandler.format_and_enqueue_url" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">format_and_enqueue_url</tt><big>(</big><em>page_url</em>, <em>current_path</em>, <em>current_depth</em><big>)</big><a class="headerlink" href="#pycrawler.CrawlerHandler.format_and_enqueue_url" title="Permalink to this definition">¶</a></dt>
 <dd><p>Enqueue a url to a page to be retrieved, if it hasn&#8217;t been enqueued yet
 and if it is &#8220;valid&#8221;, meaning it&#8217;s in the same domain as the main page</p>
 <table class="docutils field-list" frame="void" rules="none">
@@ -106,6 +106,7 @@ and if it is &#8220;valid&#8221;, meaning it&#8217;s in the same domain as the m
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>page_url</strong> &#8211; the original URL to be enqueued</li>
 <li><strong>current_path</strong> &#8211; the path of current page (for relative URLs)</li>
+<li><strong>current_depth</strong> &#8211; depth of the current page (distance from the starting page)</li>
 </ul>
 </td>
 </tr>
@@ -122,7 +123,7 @@ and if it is &#8220;valid&#8221;, meaning it&#8217;s in the same domain as the m
 
 <dl class="method">
 <dt id="pycrawler.CrawlerHandler.start_crawling">
-<tt class="descname">start_crawling</tt><big>(</big><em>url</em>, <em>threads=1</em>, <em>max_pages_to_crawl=None</em>, <em>crawler_delay=1.5</em><big>)</big><a class="headerlink" href="#pycrawler.CrawlerHandler.start_crawling" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">start_crawling</tt><big>(</big><em>url</em>, <em>threads=1</em>, <em>max_page_depth=None</em>, <em>max_pages_to_crawl=None</em>, <em>crawler_delay=1.5</em><big>)</big><a class="headerlink" href="#pycrawler.CrawlerHandler.start_crawling" title="Permalink to this definition">¶</a></dt>
 <dd><p>Starts crawling a website beginning from an URL. 
 Only pages within the same domain will considered for crawling, while pages outside it will be listed among the references of the single pages.</p>
 <table class="docutils field-list" frame="void" rules="none">
@@ -132,9 +133,19 @@ Only pages within the same domain will considered for crawling, while pages outs
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
 <li><strong>url</strong> &#8211; The starting point for the crawling.</li>
 <li><strong>threads</strong> (<em>integer or 1</em>) &#8211; Number of concurrent crawlers to be run in separate threads; Must be a positive integer (if omitted or invalid it will be set to 1 by default)</li>
-<li><strong>max_pages_to_crawl</strong> &#8211; The maximum number of pages to retrieve during crawling (if omitted, crawling will stopo only</li>
+<li><strong>max_page_depth</strong> &#8211; The maximum depth that can be reached during crawling (if omitted, crawling will stop only</li>
 </ul>
 </td>
+</tr>
+</tbody>
+</table>
+<p>when all the pages (or _max_pages_to_crawl_ pages, if it&#8217;s set) of the same domain reachable from the starting one will be crawled).
+:type max_page_depth: integer or None</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>max_pages_to_crawl</strong> &#8211; The maximum number of pages to retrieve during crawling (if omitted, crawling will stop only</td>
 </tr>
 </tbody>
 </table>
@@ -153,7 +164,7 @@ Only pages within the same domain will considered for crawling, while pages outs
 <dl class="method">
 <dt id="pycrawler.CrawlerHandler.list_resources">
 <tt class="descname">list_resources</tt><big>(</big><em>page_url=None</em><big>)</big><a class="headerlink" href="#pycrawler.CrawlerHandler.list_resources" title="Permalink to this definition">¶</a></dt>
-<dd><p>Starting from the home page, lists all the resources used 
+<dd><p>Starting from the home page (or from the page provided), lists all the resources used 
 in it and in all the pages on the same domain reachable from the home page</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -163,8 +174,8 @@ in it and in all the pages on the same domain reachable from the home page</p>
 </tr>
 </tbody>
 </table>
-<p>and explore the connection graph from that page (it will, of course, be limited to that part of the domain actually crawled, if a page
-limit has been specified) 
+<p>and explore the connection graph from that page (it will, of course, be limited to that part of the domain actually crawled,
+if a page limit or a depth limit have been specified) 
 :type page_url: string or self.__home_page_url</p>
 </dd></dl>
 
@@ -279,7 +290,7 @@ If it belongs to this domain, it may or may not have been added to the queue
         <li class="right" >
           <a href="project.html" title="Project Summary"
              >previous</a> |</li>
-        <li><a href="index.html">PyCrawler 1.1.0 documentation</a> &raquo;</li> 
+        <li><a href="index.html">PyCrawler 1.2.1 documentation</a> &raquo;</li> 
       </ul>
     </div>
     <div class="footer">
