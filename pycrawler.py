@@ -167,6 +167,8 @@ class Page(object):
     self._script_urls = Set()
     self._img_urls = Set()
     self.__handler = handler
+    self._depth = handler._url_depth[url]
+    self._url = url
     
     parser = PageParser(self)
     parser.startParsing(url)
@@ -192,7 +194,7 @@ class Page(object):
         :param url: The URL to be enqueued.
     '''
     
-    page_url = self.__handler.format_and_enqueue_url(url, self.path)
+    page_url = self.__handler.format_and_enqueue_url(url, self.path, self._depth + 1)
     if page_url is None:
       return  #pragma: no cover
     else:
@@ -272,13 +274,15 @@ class CrawlerHandler(object):
   def __init__(self):
     self._page_index = 0
 
-  def format_and_enqueue_url(self, page_url, current_path):       
+  def format_and_enqueue_url(self, page_url, current_path, current_depth):       
     ''' Enqueue a url to a page to be retrieved, if it hasn't been enqueued yet
         and if it is "valid", meaning it's in the same domain as the main page
         
         :param page_url: the original URL to be enqueued
         
         :param current_path: the path of current page (for relative URLs)
+        
+        :param current_depth: depth of the current page (distance from the starting page)
         
         :return:
           -  None <=> the URL is located in a different domain
@@ -303,11 +307,17 @@ class CrawlerHandler(object):
     if page_url[-1] == "/":
       page_url = page_url[:-1]
 
+    if page_url in self._url_depth:
+        current_depth = self._url_depth[page_url] = min(self._url_depth[page_url], current_depth)
+    else:
+        self._url_depth[page_url] = current_depth
+
     # Get lock to synchronize threads
     threadLock.acquire(True) 
         
     if (page_url != '' and not page_url in self.__queued_pages_urls
-        and (self.__max_pages_to_crawl is None or len(self.__queued_pages_urls) < self.__max_pages_to_crawl)):           
+        and (self.__max_pages_to_crawl is None or len(self.__queued_pages_urls) < self.__max_pages_to_crawl)
+        and (self._max_page_depth is None or current_depth <= self._max_page_depth) ):           
       
       self._queue.put(page_url) #Common access to the containing class queue  for all Crawler instances
       self.__queued_pages_urls[page_url] = True    #marks the url as visited
@@ -322,7 +332,7 @@ class CrawlerHandler(object):
         
     return page_url
               
-  def start_crawling(self, url, threads = 1, max_pages_to_crawl = None, crawler_delay = DEFAULT_CRAWLER_DELAY):
+  def start_crawling(self, url, threads = 1, max_page_depth = None, max_pages_to_crawl = None, crawler_delay = DEFAULT_CRAWLER_DELAY):
     ''' Starts crawling a website beginning from an URL. 
         Only pages within the same domain will considered for crawling, while pages outside it will be listed among the references of the single pages.
         
@@ -330,8 +340,12 @@ class CrawlerHandler(object):
         
         :param threads: Number of concurrent crawlers to be run in separate threads; Must be a positive integer (if omitted or invalid it will be set to 1 by default)
         :type threads: integer or 1
+
+        :param max_page_depth: The maximum depth that can be reached during crawling (if omitted, crawling will stop only  
+        when all the pages (or _max_pages_to_crawl_ pages, if it's set) of the same domain reachable from the starting one will be crawled).
+        :type max_page_depth: integer or None
         
-        :param max_pages_to_crawl: The maximum number of pages to retrieve during crawling (if omitted, crawling will stopo only  
+        :param max_pages_to_crawl: The maximum number of pages to retrieve during crawling (if omitted, crawling will stop only  
         when all the pages of the same domain reachable from the starting one will be crawled).
         :type max_pages_to_crawl: integer or None
         
@@ -342,11 +356,23 @@ class CrawlerHandler(object):
     self._last_crawl_time = 0
     self._queue = Queue()
     self.__queued_pages_urls = {}  #Keeps track of the pages already crawled, to avoid deadlock and endless circles
-    self.__max_pages_to_crawl = max_pages_to_crawl
+    
+    try:
+        max_page_depth = int(max_page_depth) 
+        self._max_page_depth = max_page_depth if max_page_depth > 0 else None
+    except TypeError:
+        self._max_page_depth = None
+    try:
+        max_pages_to_crawl = int(max_pages_to_crawl)
+        self.__max_pages_to_crawl = max_pages_to_crawl if max_pages_to_crawl > 0 else None
+    except TypeError:
+        self.__max_pages_to_crawl = None
+        
     self._crawler_delay = crawler_delay
     self._page_index = 0
     self._site = {}   #Map pages' ID to the real objects
-    self._url_to_page_id = {} #Map URLs to page IDs   
+    self._url_to_page_id = {} #Map URLs to page IDs  
+    self._url_depth = {} #Depth level fpr a given url
     self._queue = Queue()
     
     (self.__home_scheme, self.__home_domain, _, _ , _) = urlsplit(url)
@@ -355,7 +381,7 @@ class CrawlerHandler(object):
 #    if home_scheme == 'https':
 #      home_scheme = 'http'
 
-    self.__home_page_url = self.format_and_enqueue_url(url, '')
+    self.__home_page_url = self.format_and_enqueue_url(url, '', 0)
   
     threads = max(1, int(threads))
     
@@ -384,12 +410,12 @@ class CrawlerHandler(object):
 
 
   def list_resources(self, page_url = None):
-    '''Starting from the home page, lists all the resources used 
+    '''Starting from the home page (or from the page provided), lists all the resources used 
        in it and in all the pages on the same domain reachable from the home page
        
        :param page_url: It is possible to specify a page different from the one from which the crawling had started,
-       and explore the connection graph from that page (it will, of course, be limited to that part of the domain actually crawled, if a page
-       limit has been specified) 
+       and explore the connection graph from that page (it will, of course, be limited to that part of the domain actually crawled,
+       if a page limit or a depth limit have been specified) 
        :type page_url: string or self.__home_page_url
     '''     
     if page_url is None:
@@ -420,7 +446,47 @@ class CrawlerHandler(object):
         pass
     
       return img_set, css_set, script_set
-      
+     
+    pages_visited[self._url_to_page_id[page_url]] = True  
     img_set, css_set, script_set = recursive_list(self._site[self._url_to_page_id[page_url]], Set(), Set(), Set())
     return {"images": img_set, "css": css_set, "scripts": script_set}
   
+  
+  def page_graph(self, page_url = None):
+    '''Starting from the home page (or from the page provided), draws a graph of the website.
+       
+       :param page_url: It is possible to specify a page different from the one from which the crawling had started,
+       and explore the connection graph from that page (it will, of course, be limited to that part of the domain actually crawled, 
+       if a page limit or a depth limit have been specified) 
+       :type page_url: string or self.__home_page_url
+    '''     
+    if page_url is None:
+      page_url = self.__home_page_url  #Mark the first page as visited
+    elif not page_url in self._url_to_page_id:  #Checks that the page has actually been crawled
+      return []  #Otherwise return an empty set
+    
+    pages_visited = {}
+    
+    def recursive_graph(page, pages_set):
+      '''Recursively lists all the resources used by the current page and all the linked pages
+      '''
+      
+      #try:
+      pages_set.append({"links": page._links, "url": page._url, "depth": page._depth}) 
+      #except: #pragma: no cover
+      #  return pages_set
+      
+      try:
+        for link_url in page._links:
+          link_page_id = self._url_to_page_id[link_url]
+          if not link_page_id in pages_visited:
+            pages_visited[link_page_id] = True
+            pages_set = recursive_graph(self._site[link_page_id], pages_set)
+      except KeyError:
+        pass
+    
+      return pages_set
+    
+    pages_visited[self._url_to_page_id[page_url]] = True  #Mark the first page as visited
+    return recursive_graph(self._site[self._url_to_page_id[page_url]], [])
+    

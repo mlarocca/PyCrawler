@@ -13,15 +13,15 @@ import os
 
 '''UNIT + INTEGRATION TESTING'''
 
-def test_crawler(url, threads = 1, max_pages_to_crawl = None):
+def test_crawler(url, threads = 1, max_page_depth = None, max_pages_to_crawl = None):
   handler = CrawlerHandler()
-  handler.start_crawling(url, threads, max_pages_to_crawl, 0)
+  handler.start_crawling(url, threads, max_page_depth, max_pages_to_crawl, 0)
   return handler.list_resources()
   #assert(len(handler.start_crawling(url)) > 0)
 
-def test_list_resources(url, threads = 1, max_pages_to_crawl = None):
+def test_list_resources(url, threads = 1, max_page_depth = None, max_pages_to_crawl = None):
   handler = CrawlerHandler()
-  home_page = handler.start_crawling(url, threads, max_pages_to_crawl, 0)
+  home_page = handler.start_crawling(url, threads, max_page_depth, max_pages_to_crawl, 0)
   #Looks for a page that doesn't exist
   resources = handler.list_resources(home_page + str(random()))
   for s in resources.values():
@@ -30,9 +30,22 @@ def test_list_resources(url, threads = 1, max_pages_to_crawl = None):
   resources = handler.list_resources(home_page)
   assert(len( reduce(lambda s1, s2: s1 | s2, resources.values())) > 0) #At least some resource should be found
    
+def test_page_graph(url, threads = 1, max_page_depth = None, max_pages_to_crawl = None):
+  handler = CrawlerHandler()
+  home_page = handler.start_crawling(url, threads, max_page_depth, max_pages_to_crawl, 0)
+  #Looks for a page that doesn't exist
+  pages_set = handler.page_graph(home_page + str(random()))
+  assert(len(pages_set) == 0) 
+  #books for a page that DOES exist
+  pages_set_1 = handler.page_graph(home_page)
+  pages_set_2 = handler.page_graph()
+  assert (pages_set_1 == pages_set_2)
+  return pages_set_2
+  #At least some resource should be found   
+   
 def test():
 
-  print test_crawler("http://repubblica.it", 30, 20)
+  print test_crawler("http://repubblica.it", 30, None, 20)
   
   path = "/%s/tests" % os.getcwd().replace("\\", "/")
                    
@@ -55,13 +68,15 @@ def test():
   
   test_list_resources(urlunsplit(("file", path, "test_B.html", '', '')), 2)
   
+  print test_page_graph(urlunsplit(("file", path, "test_B.html", '', '')), 2, 1)
+  print test_page_graph(urlunsplit(("file", path, "test_B.html", '', '')), 2)
 '''END OF TESTING'''
 
 
 
 '''PROFILING'''
 def __profile_run(): #pragma: no cover
-  test_crawler("http://techland.time.com/2012/09/19/nasa-actually-working-on-faster-than-light-warp-drive/", 5, 100)
+  test_crawler("http://techland.time.com/2012/09/19/nasa-actually-working-on-faster-than-light-warp-drive/", 5, None, 100)
   
 def profile(): #pragma: no cover
   import cProfile
