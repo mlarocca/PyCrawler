@@ -6,10 +6,10 @@ Auto Generated Documentation
    :members: run, quit, __crawl_next
 
 .. autoclass:: pycrawler.CrawlerHandler
-   :members: format_and_enqueue_url, start_crawling, list_resources
+   :members: start_crawling, format_and_enqueue_url, check_page_by_content, list_resources, page_graph
 
 .. autoclass:: pycrawler.Page
    :members: enqueue_link
    
 .. autoclass:: pycrawler.PageParser
-   :members: __retrieve, startParsing
+   :members: startParsing, __retrieve

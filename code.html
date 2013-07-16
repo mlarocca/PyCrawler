@@ -95,33 +95,6 @@ to find the next pages to crawl and to enqueue the URLs of the next pages to be 
 <em class="property">class </em><tt class="descclassname">pycrawler.</tt><tt class="descname">CrawlerHandler</tt><a class="headerlink" href="#pycrawler.CrawlerHandler" title="Permalink to this definition">¶</a></dt>
 <dd><p>The main crawler, the object handling all the high-level crawling process.</p>
 <dl class="method">
-<dt id="pycrawler.CrawlerHandler.format_and_enqueue_url">
-<tt class="descname">format_and_enqueue_url</tt><big>(</big><em>page_url</em>, <em>current_path</em>, <em>current_depth</em><big>)</big><a class="headerlink" href="#pycrawler.CrawlerHandler.format_and_enqueue_url" title="Permalink to this definition">¶</a></dt>
-<dd><p>Enqueue a url to a page to be retrieved, if it hasn&#8217;t been enqueued yet
-and if it is &#8220;valid&#8221;, meaning it&#8217;s in the same domain as the main page</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>page_url</strong> &#8211; the original URL to be enqueued</li>
-<li><strong>current_path</strong> &#8211; the path of current page (for relative URLs)</li>
-<li><strong>current_depth</strong> &#8211; depth of the current page (distance from the starting page)</li>
-</ul>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><ul class="simple">
-<li>None &lt;=&gt; the URL is located in a different domain</li>
-<li>The formatted absolute URL, otherwise</li>
-</ul>
-</p>
-</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="method">
 <dt id="pycrawler.CrawlerHandler.start_crawling">
 <tt class="descname">start_crawling</tt><big>(</big><em>url</em>, <em>threads=1</em>, <em>max_page_depth=None</em>, <em>max_pages_to_crawl=None</em>, <em>crawler_delay=1.5</em><big>)</big><a class="headerlink" href="#pycrawler.CrawlerHandler.start_crawling" title="Permalink to this definition">¶</a></dt>
 <dd><p>Starts crawling a website beginning from an URL. 
@@ -131,7 +104,7 @@ Only pages within the same domain will considered for crawling, while pages outs
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>url</strong> &#8211; The starting point for the crawling.</li>
+<li><strong>url</strong> (<em>string</em>) &#8211; The starting point for the crawling.</li>
 <li><strong>threads</strong> (<em>integer or 1</em>) &#8211; Number of concurrent crawlers to be run in separate threads; Must be a positive integer (if omitted or invalid it will be set to 1 by default)</li>
 <li><strong>max_page_depth</strong> &#8211; The maximum depth that can be reached during crawling (if omitted, crawling will stop only</li>
 </ul>
@@ -162,6 +135,44 @@ Only pages within the same domain will considered for crawling, while pages outs
 </dd></dl>
 
 <dl class="method">
+<dt id="pycrawler.CrawlerHandler.format_and_enqueue_url">
+<tt class="descname">format_and_enqueue_url</tt><big>(</big><em>page_url</em>, <em>current_path</em>, <em>current_depth</em><big>)</big><a class="headerlink" href="#pycrawler.CrawlerHandler.format_and_enqueue_url" title="Permalink to this definition">¶</a></dt>
+<dd><p>Enqueue a url to a page to be retrieved, if it hasn&#8217;t been enqueued yet
+and if it is &#8220;valid&#8221;, meaning it&#8217;s in the same domain as the main page</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>page_url</strong> &#8211; the original URL to be enqueued</li>
+<li><strong>current_path</strong> &#8211; the path of current page (for relative URLs)</li>
+<li><strong>current_depth</strong> &#8211; depth of the current page (distance from the starting page)</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><ul class="simple">
+<li>None &lt;=&gt; the URL is located in a different domain</li>
+<li>The formatted absolute URL, otherwise</li>
+</ul>
+</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pycrawler.CrawlerHandler.check_page_by_content">
+<tt class="descname">check_page_by_content</tt><big>(</big><em>html</em>, <em>url</em><big>)</big><a class="headerlink" href="#pycrawler.CrawlerHandler.check_page_by_content" title="Permalink to this definition">¶</a></dt>
+<dd><p>Check if a page has already been visited by its content: if two different urls lead to the same identical page,
+it will be caught here, and no further processing of the page will be 
+:param html: The content of the page.
+:type html: string
+:param url: The url of the page.
+:type url: string</p>
+</dd></dl>
+
+<dl class="method">
 <dt id="pycrawler.CrawlerHandler.list_resources">
 <tt class="descname">list_resources</tt><big>(</big><em>page_url=None</em><big>)</big><a class="headerlink" href="#pycrawler.CrawlerHandler.list_resources" title="Permalink to this definition">¶</a></dt>
 <dd><p>Starting from the home page (or from the page provided), lists all the resources used 
@@ -175,6 +186,23 @@ in it and in all the pages on the same domain reachable from the home page</p>
 </tbody>
 </table>
 <p>and explore the connection graph from that page (it will, of course, be limited to that part of the domain actually crawled,
+if a page limit or a depth limit have been specified) 
+:type page_url: string or self.__home_page_url</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pycrawler.CrawlerHandler.page_graph">
+<tt class="descname">page_graph</tt><big>(</big><em>page_url=None</em><big>)</big><a class="headerlink" href="#pycrawler.CrawlerHandler.page_graph" title="Permalink to this definition">¶</a></dt>
+<dd><p>Starting from the home page (or from the page provided), draws a graph of the website.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>page_url</strong> &#8211; It is possible to specify a page different from the one from which the crawling had started,</td>
+</tr>
+</tbody>
+</table>
+<p>and explore the connection graph from that page (it will, of course, be limited to that part of the domain actually crawled, 
 if a page limit or a depth limit have been specified) 
 :type page_url: string or self.__home_page_url</p>
 </dd></dl>
@@ -220,7 +248,7 @@ If it belongs to this domain, it may or may not have been added to the queue
 
 <dl class="class">
 <dt id="pycrawler.PageParser">
-<em class="property">class </em><tt class="descclassname">pycrawler.</tt><tt class="descname">PageParser</tt><big>(</big><em>page</em><big>)</big><a class="headerlink" href="#pycrawler.PageParser" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><tt class="descclassname">pycrawler.</tt><tt class="descname">PageParser</tt><big>(</big><em>page</em>, <em>handler</em><big>)</big><a class="headerlink" href="#pycrawler.PageParser" title="Permalink to this definition">¶</a></dt>
 <dd><p>Parses html code into a structured page with separate lists of links to resources and referenced pages.</p>
 <blockquote>
 <div>The constructor creates a parser object and connects it to the page</div></blockquote>

@@ -15,16 +15,15 @@ Description
 PyCrawler is a Breadth-first multithread crawler, keeping a queue of 
 the URLs that are encountered.
 Main class is CrawlHandler. Once created, crawling can be started on 
-any page using start_crawling(url). It is possible to crawl only one site 
-at the same time.
+any page using start_crawling(url). It is possible to crawl only one domain at the same time.
 
-It is possible to hand over three extra parameters to start_crawling:
+It is possible to hand over four extra parameters to start_crawling:
     * The number of threads to be started (each thread will pick up links from a shared synchronized queue and process them);
+    * A max depth for the crawling (i.e. max distance of a page crawled from the starting point);
     * A limit to the number of pages crawled;
     * A delay between two consecutive requests of a single Crawler (to allow for polite crawling, default is 0.15 seconds)
 
-The actual crawling is made by class Crawler: each instance of Crawler runs
-in a separate thread.
+The actual crawling is made by class Crawler: each instance of Crawler runs in a separate thread.
 A list of pages already visited is used to avoid circular
 redirection between pages.
    
