@@ -1,6 +1,21 @@
 # Breadth-First, Parallel Static Crawler written in Python
 ==========================================================
 
+
+## News 2013/07/13
+   
+**Version 1.3** released
+
+* Avoid duplicate pages to be parsed again
+
+* *PageParser* constructor has been changed (now requires a second parameter, a reference to the crawler handler)
+
+* *check_page_by_content* method added to CrawlerHandler: checks if a page has been visited by examining its content
+
+* *pages_graph* now returns a dictionary with page's urls as keys
+
+
+
 ## News 2013/01/13
    
 **Version 1.2** released
@@ -13,7 +28,7 @@ Consequently, the interface of *start_crawling* method has slightly changed (See
 
 ## Documentation
  
-http://mlarocca.github.com/PyCrawler/
+http://mlarocca.github.io/PyCrawler/
 
 ## Coverage Testing results
     

@@ -9,9 +9,10 @@
    any page using start_crawling(url). It is possible to crawl only one site 
    at the same time.
    
-   It is possible to hand over three extra parameters to start_crawling:
+   It is possible to hand over four extra parameters to start_crawling:
     * The number of threads to be started (each thread will pick up links
       from a shared synchronized queue and process them);
+    * The max depth of crawling, i.e. the max distance of a page from the starting point;
     * A limit to the number of pages crawled;
     * A delay between two consecutive requests of a single Crawler (to 
       allow for polite crawling, default is 0.15 seconds)
@@ -38,12 +39,12 @@
 
 
 from time import time, sleep
-from sets import Set
 
 from HTMLParser import HTMLParser
 from urllib2 import urlopen, URLError
 from urlparse import urlsplit, urlunsplit, urljoin
 
+from hashlib import sha256
 #Threads
 from Queue import Queue     #, Empty
 import threading
@@ -67,9 +68,9 @@ class PageParser(HTMLParser):
 
   '''  
 
-  def __init__(self, page):  
+  def __init__(self, page, handler):  
     self.__page = page
-
+    self.__handler = handler
     HTMLParser.__init__(self)
   
 
@@ -101,7 +102,8 @@ class PageParser(HTMLParser):
         :param url:  The URL of the page to be retrieved and parsed.
     '''
     html = self.__retrieve(url)
-    self.feed(html)
+    if self.__handler.check_page_by_content(html, url):
+      self.feed(html)
   
   def handle_starttag(self, tag, attrs):
     def unzip(list_of_tuples):
@@ -161,16 +163,16 @@ class Page(object):
     threadLock.release()    
           
     _, self.domain, self.path, _, _ = urlsplit(url)
-    self._links = Set()
-    self._links_found = Set()
-    self._css_urls = Set()
-    self._script_urls = Set()
-    self._img_urls = Set()
+    self._links = set()
+    self._links_found = set()
+    self._css_urls = set()
+    self._script_urls = set()
+    self._img_urls = set()
     self.__handler = handler
     self._depth = handler._url_depth[url]
     self._url = url
     
-    parser = PageParser(self)
+    parser = PageParser(self, self.__handler)
     parser.startParsing(url)
     
     for link_url in self._links_found:
@@ -199,8 +201,6 @@ class Page(object):
       return  #pragma: no cover
     else:
       self._links.add(page_url)      
-
-
 
 class Crawler(threading.Thread):
   ''' A breadth-first crawler.
@@ -273,6 +273,25 @@ class CrawlerHandler(object):
   
   def __init__(self):
     self._page_index = 0
+    
+
+  def check_page_by_content(self, html, url):
+    ''' Check if a page has already been visited by its content: if two different urls lead to the same identical page,
+        it will be caught here, and no further processing of the page will be 
+        :param html: The content of the page.
+        :type html: string
+        :param url: The url of the page.
+        :type url: string
+    '''
+    page_hash = sha256(html).hexdigest()
+    #print page_hash, self.__queued_pages_hashs
+    if page_hash in self.__queued_pages_hashs:
+      self.__queued_pages_hashs[page_hash].append(url)
+      return False
+    else:
+      self.__queued_pages_hashs[page_hash] = [url]
+      return True    
+    
 
   def format_and_enqueue_url(self, page_url, current_path, current_depth):       
     ''' Enqueue a url to a page to be retrieved, if it hasn't been enqueued yet
@@ -304,7 +323,7 @@ class CrawlerHandler(object):
     #The page can be  
     page_url = urlunsplit((scheme, domain, path, '', '')) #discards query and fragment
     #Removes trailing slash
-    if page_url[-1] == "/":
+    if page_url[-1] == "/": #pragma: no cover
       page_url = page_url[:-1]
 
     if page_url in self._url_depth:
@@ -315,9 +334,10 @@ class CrawlerHandler(object):
     # Get lock to synchronize threads
     threadLock.acquire(True) 
         
-    if (page_url != '' and not page_url in self.__queued_pages_urls
-        and (self.__max_pages_to_crawl is None or len(self.__queued_pages_urls) < self.__max_pages_to_crawl)
-        and (self._max_page_depth is None or current_depth <= self._max_page_depth) ):           
+    if (page_url != '' and
+        (self.__max_pages_to_crawl is None or len(self.__queued_pages_urls) < self.__max_pages_to_crawl) and
+        (self._max_page_depth is None or current_depth <= self._max_page_depth) and
+        not page_url in self.__queued_pages_urls):           
       
       self._queue.put(page_url) #Common access to the containing class queue  for all Crawler instances
       self.__queued_pages_urls[page_url] = True    #marks the url as visited
@@ -337,6 +357,7 @@ class CrawlerHandler(object):
         Only pages within the same domain will considered for crawling, while pages outside it will be listed among the references of the single pages.
         
         :param url: The starting point for the crawling.
+        :type url: string
         
         :param threads: Number of concurrent crawlers to be run in separate threads; Must be a positive integer (if omitted or invalid it will be set to 1 by default)
         :type threads: integer or 1
@@ -355,7 +376,8 @@ class CrawlerHandler(object):
 
     self._last_crawl_time = 0
     self._queue = Queue()
-    self.__queued_pages_urls = {}  #Keeps track of the pages already crawled, to avoid deadlock and endless circles
+    self.__queued_pages_urls = {}  #Keeps track of the url pages already crawled, to avoid deadlock and endless circles
+    self.__queued_pages_hashs = {}  #Keeps track of the pages already crawled, by hashing their content
     
     try:
         max_page_depth = int(max_page_depth) 
@@ -421,7 +443,7 @@ class CrawlerHandler(object):
     if page_url is None:
       page_url = self.__home_page_url
     elif not page_url in self._url_to_page_id:  #Checks that the page has actually been crawled
-      return {"images": Set(), "css": Set(), "scripts": Set()}  #Otherwise return an empty set
+      return {"images": set(), "css": set(), "scripts": set()}  #Otherwise return an empty set
     
     pages_visited = {}
     
@@ -442,13 +464,13 @@ class CrawlerHandler(object):
           if not link_page_id in pages_visited:
             pages_visited[link_page_id] = True
             img_set, css_set, script_set = recursive_list(self._site[link_page_id], img_set, css_set, script_set)
-      except KeyError:
+      except KeyError: #pragma: no cover
         pass
     
       return img_set, css_set, script_set
      
     pages_visited[self._url_to_page_id[page_url]] = True  
-    img_set, css_set, script_set = recursive_list(self._site[self._url_to_page_id[page_url]], Set(), Set(), Set())
+    img_set, css_set, script_set = recursive_list(self._site[self._url_to_page_id[page_url]], set(), set(), set())
     return {"images": img_set, "css": css_set, "scripts": script_set}
   
   
@@ -472,7 +494,7 @@ class CrawlerHandler(object):
       '''
       
       #try:
-      pages_set.append({"links": page._links, "url": page._url, "depth": page._depth}) 
+      pages_set[page._url] = {"links": page._links, "depth": page._depth} 
       #except: #pragma: no cover
       #  return pages_set
       
@@ -488,5 +510,14 @@ class CrawlerHandler(object):
       return pages_set
     
     pages_visited[self._url_to_page_id[page_url]] = True  #Mark the first page as visited
-    return recursive_graph(self._site[self._url_to_page_id[page_url]], [])
+    graph = recursive_graph(self._site[self._url_to_page_id[page_url]], {})
+    
+    #Now we need to add duplicates for identical copies of pages found
+    for url_list in self.__queued_pages_hashs.values():
+      if len(url_list) > 1:
+        main_url = url_list[0]
+        for url in url_list[1:]:
+          graph[url] = graph[main_url]
+          
+    return graph
     

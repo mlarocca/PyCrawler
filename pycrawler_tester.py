@@ -56,6 +56,7 @@ def test():
   assert("img_2.jpg" in site_resources["images"])
   assert("http://mysite.me/img_1.jpg" in site_resources["images"])
   assert("/test.js" in site_resources["scripts"])
+
   
   #Test cyclic reference between 3 or more documents 
   site_resources = test_crawler(urlunsplit(("file", path, "test_B.html", '', '')), 2)
@@ -70,6 +71,11 @@ def test():
   
   print test_page_graph(urlunsplit(("file", path, "test_B.html", '', '')), 2, 1)
   print test_page_graph(urlunsplit(("file", path, "test_B.html", '', '')), 2)
+  
+  url1 = urlunsplit(("file", path, "test_1.html", '', ''))
+  url2 = urlunsplit(("file", path, "test_1_copy.html", '', ''))
+  graph = test_page_graph(url1, 5)
+  assert(graph[url1] == graph[url2])  
 '''END OF TESTING'''
 
 
@@ -91,10 +97,9 @@ def profile(): #pragma: no cover
   
   
   
-if __name__ == '__main__':
+#if __name__ == '__main__':
   #Keep a log to give signals of its activity
-  logging.basicConfig(filename='crawler.log', level = logging.DEBUG)  #logging.DEBUG
+logging.basicConfig(filename='crawler.log', level = logging.DEBUG)  #logging.DEBUG
   
-
-  test()
+test()
 #  profile() 
