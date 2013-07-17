@@ -2,7 +2,16 @@
 ==========================================================
 
 
-## News 2013/07/13
+## News 2013/07/17
+   
+**Version 1.3.2** released
+
+* HTML5 video and audio tags are now supported
+
+* Relative URLs in the dictionary returned by *pages_graph* are now translated into absolute ones
+
+
+## News 2013/07/16
    
 **Version 1.3** released
 

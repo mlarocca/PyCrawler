@@ -43,6 +43,7 @@ from time import time, sleep
 from HTMLParser import HTMLParser
 from urllib2 import urlopen, URLError
 from urlparse import urlsplit, urlunsplit, urljoin
+from copy import deepcopy
 
 from hashlib import sha256
 #Threads
@@ -55,6 +56,9 @@ import logging
 
 
 DEFAULT_CRAWLER_DELAY = 1.500  #Polite strategy: at least 1.5 seconds between two pages retrieval
+
+VIDEO_URLS_TAG = "urls"
+VIDEO_POSTER_TAG = "poster"
 
 threadLock = threading.Lock()
 
@@ -71,6 +75,7 @@ class PageParser(HTMLParser):
   def __init__(self, page, handler):  
     self.__page = page
     self.__handler = handler
+    self.__last_media_tag = ""
     HTMLParser.__init__(self)
   
 
@@ -139,8 +144,45 @@ class PageParser(HTMLParser):
       src = attrs.get('src')
       if src:
         self.__page._img_urls.add(src)
+    elif tag == 'video':
+      attrs = unzip(attrs)
+      src = attrs.get('src')
+      
+      if src != None:
+        video = {"urls": {src}}
+      else:
+        video = {"urls": set()}
+
+      poster = attrs.get('poster')  
+      if poster != None:
+        video[VIDEO_POSTER_TAG] = poster
+        self.__page._img_urls.add(poster)      
     
-    
+      self.__page._videos.append(video)
+      #to support multiple sources video tag
+      self.__last_media_tag = "video"
+    elif tag == 'audio':
+      self.__page._audios.append(set())
+      self.__last_media_tag = "audio"
+    elif tag == "source":
+      attrs = unzip(attrs)
+      src = attrs.get('src')      
+      if self.__last_media_tag == "video":
+        self.__page._videos[-1][VIDEO_URLS_TAG].add(src)
+
+      elif self.__last_media_tag == "audio":
+        self.__page._audios[-1].add(src)
+
+        
+  def handle_endtag(self, tag):
+    if tag == 'video':
+      #video tag closed
+      if self.__last_media_tag == "video":
+        self.__last_media_tag = "" 
+    elif tag == 'audio':
+      #audio tag closed
+      if self.__last_media_tag == "audio":
+        self.__last_media_tag = ""
 
 class Page(object):
   ''' 
@@ -168,6 +210,8 @@ class Page(object):
     self._css_urls = set()
     self._script_urls = set()
     self._img_urls = set()
+    self._videos = []
+    self._audios = []
     self.__handler = handler
     self._depth = handler._url_depth[url]
     self._url = url
@@ -472,7 +516,7 @@ class CrawlerHandler(object):
     pages_visited[self._url_to_page_id[page_url]] = True  
     img_set, css_set, script_set = recursive_list(self._site[self._url_to_page_id[page_url]], set(), set(), set())
     return {"images": img_set, "css": css_set, "scripts": script_set}
-  
+
   
   def page_graph(self, page_url = None):
     '''Starting from the home page (or from the page provided), draws a graph of the website.
@@ -489,12 +533,32 @@ class CrawlerHandler(object):
     
     pages_visited = {}
     
+    def transform_video_urls(video, page_url):
+      ''' Transform each urls for a video from relative to absolute 
+          :param video: the video object to modify
+          :type video: dictionary
+          :param page_url: The url of the base page
+          :type page_url: string
+      '''
+      video = deepcopy(video) #Need to deepcopy it in order to support multiple istances of the same page located at different urls
+      video[VIDEO_URLS_TAG] = map(lambda url: urljoin(page_url, url), video[VIDEO_URLS_TAG])
+      if VIDEO_POSTER_TAG in video:
+        video[VIDEO_POSTER_TAG] = urljoin(page_url, video[VIDEO_POSTER_TAG])
+      return video
+    
+    def process_page(page, page_url):
+      return  { "links": page._links, "depth": page._depth, 
+                "resources":  {"images": map(lambda url: urljoin(page_url, url), page._img_urls), 
+                               "videos": [transform_video_urls(video, page_url) for video in page._videos if len(video[VIDEO_URLS_TAG]) > 0], 
+                               "audios": [map(lambda url: urljoin(page_url, url), audio) for audio in page._audios if len(audio) > 0]
+                              }
+              } 
+      
     def recursive_graph(page, pages_set):
       '''Recursively lists all the resources used by the current page and all the linked pages
       '''
-      
       #try:
-      pages_set[page._url] = {"links": page._links, "depth": page._depth} 
+      pages_set[page._url] = process_page(page, page._url)
       #except: #pragma: no cover
       #  return pages_set
       
@@ -517,7 +581,8 @@ class CrawlerHandler(object):
       if len(url_list) > 1:
         main_url = url_list[0]
         for url in url_list[1:]:
-          graph[url] = graph[main_url]
+          #remap the urls; it needs to parse again the page because only relative urls need to be changed
+          graph[url] = process_page(self._site[self._url_to_page_id[main_url]], url)
           
     return graph
     
