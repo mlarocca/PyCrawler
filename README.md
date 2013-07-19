@@ -1,6 +1,11 @@
 # Breadth-First, Parallel Static Crawler written in Python
 ==========================================================
 
+## News 2013/07/17
+   
+**Version 1.3.3** released
+
+* Minor changes for better exception handling and graceful failure
 
 ## News 2013/07/17
    

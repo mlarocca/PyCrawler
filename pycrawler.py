@@ -94,7 +94,10 @@ class PageParser(HTMLParser):
       page = urlopen(url)
     except URLError:
       logging.error("Error: can't open %s" % url)
-      return ""
+      return None
+    except Exception:
+      logging.error("Error: can't open %s" % url)
+      return None   
     try:  
       return "\n".join(page.readlines())
     except KeyError:  #pragma: no cover
@@ -107,8 +110,14 @@ class PageParser(HTMLParser):
         :param url:  The URL of the page to be retrieved and parsed.
     '''
     html = self.__retrieve(url)
-    if self.__handler.check_page_by_content(html, url):
-      self.feed(html)
+    
+    if html != None and self.__handler.check_page_by_content(html, url):
+      try:
+        self.feed(html)
+      except UnicodeDecodeError:
+        logging.error("UnicodeDecodeError, url: %s" % url)
+      except UnicodeEncodeError:
+        logging.error("UnicodeEncodeError, url: %s" % url)
   
   def handle_starttag(self, tag, attrs):
     def unzip(list_of_tuples):
