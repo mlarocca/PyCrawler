@@ -371,7 +371,7 @@ class CrawlerHandler(object):
     if domain == '':
       domain = self.__home_domain
       path = urljoin(current_path, path)
-    elif domain != self.__home_domain or ( scheme != self.__home_scheme):
+    elif not domain.endswith(self.__home_domain):
       return None  
     #The page can be  
     page_url = urlunsplit((scheme, domain, path, '', '')) #discards query and fragment
@@ -511,14 +511,15 @@ class CrawlerHandler(object):
       except: #pragma: no cover
         return img_set, css_set, script_set
       
-      try:
-        for link_url in page._links:
+      
+      for link_url in page._links:
+        try:
           link_page_id = self._url_to_page_id[link_url]
           if not link_page_id in pages_visited:
             pages_visited[link_page_id] = True
             img_set, css_set, script_set = recursive_list(self._site[link_page_id], img_set, css_set, script_set)
-      except KeyError: #pragma: no cover
-        pass
+        except KeyError: #pragma: no cover
+          pass
     
       return img_set, css_set, script_set
      
@@ -571,14 +572,14 @@ class CrawlerHandler(object):
       #except: #pragma: no cover
       #  return pages_set
       
-      try:
-        for link_url in page._links:
+      for link_url in page._links:
+        try:
           link_page_id = self._url_to_page_id[link_url]
           if not link_page_id in pages_visited:
             pages_visited[link_page_id] = True
             pages_set = recursive_graph(self._site[link_page_id], pages_set)
-      except KeyError:
-        pass
+        except KeyError:
+          pass
     
       return pages_set
     
