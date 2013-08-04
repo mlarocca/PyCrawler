@@ -427,6 +427,13 @@ class CrawlerHandler(object):
         :type crawler_delay: float or DEFAULT_CRAWLER_DELAY
     '''
 
+    #verify that the url provided is indeed reachable
+    try:
+      urlopen(url)
+    except (URLError, Exception):
+      self.__home_page_url = None
+      return None
+
     self._last_crawl_time = 0
     self._queue = Queue()
     self.__queued_pages_urls = {}  #Keeps track of the url pages already crawled, to avoid deadlock and endless circles

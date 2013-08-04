@@ -44,7 +44,8 @@ def test_page_graph(url, threads = 1, max_page_depth = None, max_pages_to_crawl 
   #At least some resource should be found   
    
 def test():
-
+  handler = CrawlerHandler()
+  assert handler.start_crawling("www.news.ycombinator.com", 30, None, 20, 0) is None
   print test_crawler("http://repubblica.it", 30, None, 20)
   
   path = "/%s/tests" % os.getcwd().replace("\\", "/")
